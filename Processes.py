@@ -59,7 +59,6 @@ class Process(object):
 #Pendiente de revisar, quiero ver si puede separase en dos archivos
 class Processor(object):
     results: dict[str, list] = {}
-    metrics: dict[str, float] = {}
     TRACE = False
 
     def __init__(self, trace:bool = False) -> None:
@@ -75,9 +74,6 @@ class Processor(object):
 
         env.process(self.process_generator(env, rng, CPU, RAM, velocidad_procesador, velocidad_generacion_procesos, cantidad_procesos))
         env.run()
-
-        self.metrics["mean_tiempo_en_sistema"] = float(np.mean(self.results["tiempo_en_sistema"]))
-        self.metrics["std_tiempo_en_sistema"] = float(np.std(self.results["tiempo_en_sistema"]))
 
     def process_generator(self, env:simpy.Environment, rng:np.random.Generator, CPU:simpy.Resource, RAM:simpy.Container, velocidad_procesador:int, interval:float, max:int):
         for i in range(max):
