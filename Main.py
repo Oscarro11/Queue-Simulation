@@ -3,22 +3,14 @@ import numpy as np
 
 import Processes
 
-def process_generator(env:simpy.Environment, interval:float, max:int):
-    for i in range(max):
-        inter_arrival_time = rng.exponential(1.0 / interval)
-        yield env.timeout(inter_arrival_time)
-        Processes.Process(i+1, env, CPU, RAM, velocidad_procesador, rng)
-
-numero_procesos = 25
-numero_CPUs = 1
+procesos_a_generar = 25
+CPUs_disponibles = 1
 velocidad_procesador = 3
 velocidad_generacion_procesos = 10
 seed = 44
 
-env = simpy.Environment()
-rng = np.random.default_rng(seed)
-RAM = simpy.Container(env, init=100, capacity=100)
-CPU = simpy.Resource(env, capacity=numero_CPUs)
+procesador = Processes.Processor()
+procesador.single_run(CPUs_disponibles, procesos_a_generar, velocidad_procesador, velocidad_generacion_procesos, seed)
 
-env.process(process_generator(env, velocidad_generacion_procesos, numero_procesos))
-env.run()
+print(round(procesador.metrics.get("mean_tiempo_en_sistema", 0.0)), 2)
+print(round(procesador.metrics.get("std_tiempo_en_sistema", 0.0)), 2)
