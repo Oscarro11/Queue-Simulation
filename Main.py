@@ -1,17 +1,18 @@
-import simpy
-import numpy as np
 import pandas as pd
+import streamlit as stl
 
-import Processes
+from Processes import Processor
 
-procesos_a_generar = 25
-CPUs_disponibles = 1
-velocidad_procesador = 3
-velocidad_generacion_procesos = 10
+stl.title("Simulacion de colas en CPU")
+procesos_a_generar = stl.slider("Procesos a generar", 25, 300, 25, 25)
+CPUs_disponibles = stl.slider("CPUs disponibles", 1, 8, 1, 1)
+velocidad_procesador = stl.slider("Cantidad de instrucciones procesadas al mismo tiempo", 1, 8, 1, 1)
+velocidad_generacion_procesos = stl.slider("Intervalo en generacion de procesos", 5, 300, 5, 5)
 seed = 44
 
-procesador = Processes.Processor()
-procesador.single_run(CPUs_disponibles, procesos_a_generar, velocidad_procesador, velocidad_generacion_procesos, seed)
+if stl.button("Realizar simulacion"):
+    procesador = Processor()
+    procesador.single_run(CPUs_disponibles, procesos_a_generar, velocidad_procesador, velocidad_generacion_procesos, seed)
 
-mostrar_resultados = pd.DataFrame(procesador.results)
-print(mostrar_resultados.describe() )
+    resultados = pd.DataFrame(procesador.results)
+    stl.dataframe(resultados.describe())
