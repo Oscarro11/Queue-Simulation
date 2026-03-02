@@ -1,42 +1,47 @@
-import random
+import numpy as np
+import simpy
 
-class Process:
-    instrucciones = -1
-    estado = ""
+class Process(object):
+    def __init__(self, identificador:int, env:simpy.Environment, CPU:simpy.Resource, RAM:simpy.Container, instrucciones_procesamiento:int, rng_memoria:np.random.Generator) -> None:
+        self.identificador = identificador
+        self.env = env
+        self.CPU = CPU
+        self.RAM = RAM
+        self.rng = rng_memoria
+        self.instrucciones_procesamiento = instrucciones_procesamiento
 
-    def __init__(self, instrucciones:int) -> None:
-        self.instrucciones = instrucciones
+        self.instrucciones = round(self.rng.random() * (10 - 1) + 1)
+        self.memoria = 0
 
-class Processor:
-    memoria_disponible = -1
-    instrucciones_proceso = -1
+        print(f"El proceso '{self.identificador}' se ha generado en: {env.now:.2f}")
+        self.action = env.process(self.admitir())
 
-    def __init__(self, memoria:int, instrucciones_proceso:int) -> None:
-        self.memoria_disponible = memoria
-        self.instrucciones_proceso = instrucciones_proceso
+    def admitir(self):
+        memoria_necesaria = round(self.rng.random() * (10 - 1) + 1)
+        if memoria_necesaria < self.RAM.level:
+            self.memoria = memoria_necesaria
+            self.RAM.get(memoria_necesaria)
+            yield self.env.timeout(1)
 
-    def evaluar_nuevo(self, proceso:Process) -> bool:
-        memoria_solicitada = random.randint(1, 10)
-        if memoria_solicitada < self.memoria_disponible:
-            self.memoria_disponible -= memoria_solicitada
-            proceso.estado = "ready"
-            return True
-        
-        else:
-            proceso.estado = "waiting"
-            return False
-        
-    def procesar_pendiente(self, proceso:Process) -> bool:
-        proceso.instrucciones -= self.instrucciones_proceso
-        if proceso.instrucciones <= 0:
-            return True
-        else:
-            return False
-        
-    def evaluar_continuacion(self, proceso:Process) -> bool:
-        if random.randint(1, 2) == 1:
-            proceso.estado = "waiting"
-            return False
-        else:
-            proceso.estado = "ready"
-            return True
+            print(f"El proceso '{self.identificador}' ha sido admitido en la cola de 'ready'. Tiempo: {self.env.now:.2f}")
+            self.action = self.env.process(self.procesar())
+
+        yield self.env.timeout(1)
+
+    def procesar(self): 
+        with self.CPU.request() as rq:
+            print(f"El proceso '{self.identificador}' ha sido admitido en la cola de 'running'. Tiempo: {self.env.now:.2f}")
+            yield rq
+            yield self.env.timeout(1)
+
+            self.instrucciones -= self.instrucciones_procesamiento
+            self.RAM.put(self.memoria)
+            if self.instrucciones <= 0:
+                print(f"El proceso '{self.identificador}' ha terminado de procesarse. Tiempo: {self.env.now:.2f}")
+            else:
+                if round(self.rng.random() * (2 - 1) + 1) == 1:
+                    print(f"El proceso '{self.identificador}' ha regresado a la cola de 'waiting'. Tiempo: {self.env.now:.2f}")
+                    self.action = self.env.process(self.admitir())
+                else:
+                    print(f"El proceso '{self.identificador}' ha regresado la cola de 'ready'. Tiempo: {self.env.now:.2f}")
+                    self.action = self.env.process(self.procesar())
