@@ -14,7 +14,6 @@ class Process(object):
         self.momento_creacion = env.now
         self.results = results
         self.TRACE = trace
-        self.used_memory = False
 
         self.instrucciones = round(self.rng.random() * (10 - 1) + 1)
         self.memoria = 0
