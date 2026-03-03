@@ -14,6 +14,7 @@ class Process(object):
         self.momento_creacion = env.now
         self.results = results
         self.TRACE = trace
+        self.used_memory = False
 
         self.instrucciones = round(self.rng.random() * (10 - 1) + 1)
         self.memoria = 0
@@ -26,16 +27,15 @@ class Process(object):
             print(msg)
 
     def admitir(self):
-        memoria_necesaria = round(self.rng.random() * (10 - 1) + 1)
-        if memoria_necesaria < self.RAM.level:
-            self.memoria = memoria_necesaria
-            self.RAM.get(memoria_necesaria)
-            yield self.env.timeout(1)
+        self.memoria = round(self.rng.random() * (10 - 1) + 1)
+        
+        #Preguntar acerca del manejo de memoria
+        yield self.RAM.get(self.memoria)  
 
-            self.trace(f"El proceso '{self.identificador}' ha sido admitido en la cola de 'ready'. Tiempo: {self.env.now:.2f}")
-            self.action = self.env.process(self.procesar())
-
-        yield self.env.timeout(1)
+        self.trace(f"El proceso '{self.identificador}' ha sido admitido en la cola de 'ready'. Tiempo: {self.env.now:.2f}")
+        
+        yield self.RAM.put(self.memoria)
+        yield self.env.process(self.procesar())
 
     def procesar(self): 
         with self.CPU.request() as rq:
@@ -43,18 +43,18 @@ class Process(object):
             yield rq
             yield self.env.timeout(1)
 
-            self.instrucciones -= self.instrucciones_procesamiento
-            self.RAM.put(self.memoria)
-            if self.instrucciones <= 0:
-                self.trace(f"El proceso '{self.identificador}' ha terminado de procesarse. Tiempo: {self.env.now:.2f}")
-                self.results["tiempo_en_sistema"].append(self.env.now - self.momento_creacion)
+            self.instrucciones -= self.instrucciones_procesamiento       
+        
+        if self.instrucciones <= 0:
+            self.trace(f"El proceso '{self.identificador}' ha terminado de procesarse. Tiempo: {self.env.now:.2f}")
+            self.results["tiempo_en_sistema"].append(self.env.now - self.momento_creacion)
+        else:
+            if round(self.rng.random() * (2 - 1) + 1) == 1:
+                self.trace(f"El proceso '{self.identificador}' ha regresado a la cola de 'waiting'. Tiempo: {self.env.now:.2f}")
+                yield self.env.process(self.admitir())
             else:
-                if round(self.rng.random() * (2 - 1) + 1) == 1:
-                    self.trace(f"El proceso '{self.identificador}' ha regresado a la cola de 'waiting'. Tiempo: {self.env.now:.2f}")
-                    self.action = self.env.process(self.admitir())
-                else:
-                    self.trace(f"El proceso '{self.identificador}' ha regresado la cola de 'ready'. Tiempo: {self.env.now:.2f}")
-                    self.action = self.env.process(self.procesar())
+                self.trace(f"El proceso '{self.identificador}' ha regresado la cola de 'ready'. Tiempo: {self.env.now:.2f}")
+                yield self.env.process(self.procesar())
 
 #Pendiente de revisar, quiero ver si puede separase en dos archivos
 class Processor(object):
