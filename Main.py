@@ -6,6 +6,7 @@ from Processes import Processor
 
 if "active_dataframe" not in st.session_state:
     st.session_state["dataframes_resultados"] = []
+    st.session_state["dataframes_resultados_activo"] = []
     st.session_state["dataframe_parametros"] = pd.DataFrame(columns=["Procesos a generar", "CPUs disponibles", "Cantidad de instrucciones", "Intervalo de generacion"])
     st.session_state["active_dataframe"] = pd.DataFrame()
 
@@ -24,11 +25,16 @@ if st.button("Realizar simulacion"):
 
     resultados = pd.DataFrame(procesador.results).describe()
     st.session_state["active_dataframe"] = resultados
-    st.session_state["dataframes_resultados"].append(resultados)
+    st.session_state["dataframes_resultados_activo"].append(resultados)
     st.dataframe(st.session_state["active_dataframe"])
+
+if st.button("Grabar serie"):
+    st.session_state["dataframes_resultados"].append(st.session_state["dataframes_resultados_activo"])
+    st.session_state["dataframes_resultados_activo"] = []
 
 if st.button("Reiniciar datos"):
     st.session_state["dataframes_resultados"] = []
+    st.session_state["dataframes_resultados_activo"] = []
     st.session_state["dataframe_parametros"] = pd.DataFrame(columns=["Procesos a generar", "CPUs disponibles", "Cantidad de instrucciones", "Intervalo de generacion"])
     st.session_state["active_dataframe"] = pd.DataFrame()
 
@@ -37,15 +43,17 @@ metrica = st.selectbox("Metrica", st.session_state["active_dataframe"].index)
 parametro_de_medida = st.selectbox("Parametro de medida", st.session_state["dataframe_parametros"].columns)
 
 if st.button("Generar graficas"):
-    resultados_generales = pd.DataFrame(columns=[f"{variable} / {metrica}"])
-
-    for i in range(len(st.session_state["dataframes_resultados"])):
-        resultados_generales.loc[st.session_state["dataframe_parametros"].loc[i][parametro_de_medida]] = (
-            st.session_state["dataframes_resultados"][i].loc[metrica][variable])
-
     fig, ax = plt.subplots()
 
-    resultados_generales.plot(ax=ax)
+    for dataframe_list in st.session_state["dataframes_resultados"]:
+        resultados_generales = pd.DataFrame(columns=[f"{variable} / {metrica}", f"{parametro_de_medida}"])
+
+        for i in range(len(dataframe_list)):
+            dataframe = dataframe_list[i]
+            resultados_generales.loc[i] = (dataframe.loc[metrica][variable], st.session_state["dataframe_parametros"].loc[i][parametro_de_medida])
+        
+        resultados_generales.plot.line(ax=ax, x=f"{parametro_de_medida}", y=f"{variable} / {metrica}")
+        resultados_generales.plot.scatter(ax=ax, x=f"{parametro_de_medida}", y=f"{variable} / {metrica}", c="black")
 
     ax.set_title("Comparacion de resultado vs experimento")
     ax.set_xlabel(parametro_de_medida)
