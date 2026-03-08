@@ -7,36 +7,46 @@ from Processes import Processor
 if "active_dataframe" not in st.session_state:
     st.session_state["dataframes_resultados"] = []
     st.session_state["dataframes_resultados_activo"] = []
-    st.session_state["dataframe_parametros"] = pd.DataFrame(columns=["Procesos a generar", "CPUs disponibles", "Cantidad de instrucciones", "Intervalo de generacion"])
+    st.session_state["dataframe_parametros"] = pd.DataFrame(columns=["Procesos a generar", "CPUs disponibles", "Cantidad RAM", "Cantidad de instrucciones", "Intervalo de generacion"])
     st.session_state["active_dataframe"] = pd.DataFrame()
 
 st.title("Simulacion de colas en CPU")
 procesos_a_generar = st.slider("Procesos a generar", 25, 300, 25, 25)
 CPUs_disponibles = st.slider("CPUs disponibles", 1, 8, 1, 1)
+cantidad_ram = st.slider("RAM disponible", 100, 500, 100, 100)
 velocidad_procesador = st.slider("Cantidad de instrucciones procesadas al mismo tiempo", 1, 8, 1, 1)
 velocidad_generacion_procesos = st.slider("Intervalo en generacion de procesos", 1, 20, 1, 1)
 seed = 44
 
-if st.button("Realizar simulacion"):
-    procesador = Processor()
-    procesador.single_run(CPUs_disponibles, procesos_a_generar, velocidad_procesador, velocidad_generacion_procesos, seed)
+texto = st.text(f"Simulaciones en esta serie: {len(st.session_state["dataframes_resultados_activo"])}")
 
-    st.session_state["dataframe_parametros"].loc[len(st.session_state["dataframe_parametros"])] = [procesos_a_generar, CPUs_disponibles, velocidad_procesador, velocidad_generacion_procesos]
+col1, col2, col3 = st.columns(3)
 
-    resultados = pd.DataFrame(procesador.results).describe()
-    st.session_state["active_dataframe"] = resultados
-    st.session_state["dataframes_resultados_activo"].append(resultados)
-    st.dataframe(st.session_state["active_dataframe"])
+with col1:
+    if st.button("Realizar simulacion"):
+        procesador = Processor()
+        procesador.single_run(CPUs_disponibles, procesos_a_generar, cantidad_ram, velocidad_procesador, velocidad_generacion_procesos, seed)
 
-if st.button("Grabar serie"):
-    st.session_state["dataframes_resultados"].append(st.session_state["dataframes_resultados_activo"])
-    st.session_state["dataframes_resultados_activo"] = []
+        st.session_state["dataframe_parametros"].loc[len(st.session_state["dataframe_parametros"])] = [procesos_a_generar, CPUs_disponibles, cantidad_ram, velocidad_procesador, velocidad_generacion_procesos]
 
-if st.button("Reiniciar datos"):
-    st.session_state["dataframes_resultados"] = []
-    st.session_state["dataframes_resultados_activo"] = []
-    st.session_state["dataframe_parametros"] = pd.DataFrame(columns=["Procesos a generar", "CPUs disponibles", "Cantidad de instrucciones", "Intervalo de generacion"])
-    st.session_state["active_dataframe"] = pd.DataFrame()
+        resultados = pd.DataFrame(procesador.results).describe()
+        st.session_state["active_dataframe"] = resultados
+        st.session_state["dataframes_resultados_activo"].append(resultados)
+        st.rerun()
+
+with col2:
+    if st.button("Grabar serie"):
+        st.session_state["dataframes_resultados"].append(st.session_state["dataframes_resultados_activo"])
+        st.session_state["dataframes_resultados_activo"] = []
+        st.toast("La serie se ha guardado exitosamente", icon="✅")
+
+with col3:
+    if st.button("Reiniciar datos"): 
+        st.session_state["dataframes_resultados"] = []
+        st.session_state["dataframes_resultados_activo"] = []
+        st.session_state["dataframe_parametros"] = pd.DataFrame(columns=["Procesos a generar", "CPUs disponibles", "Cantidad RAM", "Cantidad de instrucciones", "Intervalo de generacion"])
+        st.session_state["active_dataframe"] = pd.DataFrame()
+        st.toast("Los datos de toda la sesion se han reiniciado")
 
 variable = st.selectbox("Variable", st.session_state["active_dataframe"].columns)
 metrica = st.selectbox("Metrica", st.session_state["active_dataframe"].index)
@@ -44,6 +54,7 @@ parametro_de_medida = st.selectbox("Parametro de medida", st.session_state["data
 
 if st.button("Generar graficas"):
     fig, ax = plt.subplots()
+    ax.set_ylim(0, 300)
 
     for dataframe_list in st.session_state["dataframes_resultados"]:
         resultados_generales = pd.DataFrame(columns=[f"{variable} / {metrica}", f"{parametro_de_medida}"])

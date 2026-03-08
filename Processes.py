@@ -63,12 +63,12 @@ class Processor(object):
     def __init__(self, trace:bool = False) -> None:
         self.TRACE = trace
 
-    def single_run(self, CPUs_disponibles:int, cantidad_procesos:int, velocidad_procesador:int, velocidad_generacion_procesos:int, rng_seed:int):
+    def single_run(self, CPUs_disponibles:int, cantidad_procesos:int, cantidad_RAM:int, velocidad_procesador:int, velocidad_generacion_procesos:int, rng_seed:int):
         self.results["tiempo_en_sistema"] = []
         
         env = simpy.Environment()
         rng = np.random.default_rng(rng_seed)
-        RAM = simpy.Container(env, init=100, capacity=100)
+        RAM = simpy.Container(env, init=cantidad_RAM, capacity=cantidad_RAM)
         CPU = simpy.Resource(env, capacity=CPUs_disponibles)
 
         env.process(self.process_generator(env, rng, CPU, RAM, velocidad_procesador, velocidad_generacion_procesos, cantidad_procesos))
